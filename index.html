@@ -172,7 +172,7 @@ body{
 <script>
 if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(err => {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
       console.warn('Service Worker registration failed:', err);
     });
   });
@@ -209,11 +209,11 @@ if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || wi
 
                 <!-- 働き(@) ・ 数量(N) -->
                 <div class="flex border-b border-[#545458]">
-                    <div id="field-pitch" class="relative flex-1 px-3 h-12 border-r border-[#545458] flex items-center transition-all overflow-hidden" onclick="setActiveField('pitch')">
+                    <div id="field-pitch" class="relative flex-1 px-3 h-[46px] border-r border-[#545458] flex items-center transition-all overflow-hidden" onclick="setActiveField('pitch')">
                         <span id="label-pitch" class="text-[13px] font-bold uppercase text-[#0a84ff] shrink-0 whitespace-nowrap mr-1">働き(＠)</span>
                         <input type="text" id="pitch" inputmode="none" class="flex-1 w-full h-full bg-transparent text-center text-[20px] font-bold outline-none font-mono text-[#0a84ff]" placeholder="0">
                     </div>
-                    <div id="field-count" class="relative flex-1 px-3 h-12 flex items-center transition-all overflow-hidden" onclick="setActiveField('count')">
+                    <div id="field-count" class="relative flex-1 px-3 h-[46px] flex items-center transition-all overflow-hidden" onclick="setActiveField('count')">
                         <span id="label-count" class="text-[13px] font-bold uppercase text-[#30d158] shrink-0 whitespace-nowrap mr-1">数量(N)</span>
                         <input type="text" id="count" inputmode="none" class="flex-1 w-full h-full bg-transparent text-center text-[20px] font-bold outline-none font-mono text-[#30d158]" placeholder="0">
                     </div>
