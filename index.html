@@ -170,8 +170,12 @@ body{
 }
 </style>
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(err => {
+      console.warn('Service Worker registration failed:', err);
+    });
+  });
 }
 </script>
 
@@ -190,7 +194,7 @@ if ('serviceWorker' in navigator) {
 
         <div id="screen-calc" class="screen active">
             <!-- 独立した備考枠 -->
-            <div id="field-inputNo" class="relative px-3 h-12 border border-[#c0c0c0] bg-[#1c1c1e] rounded-[10px] flex items-center mb-3 transition-all" onclick="setActiveField('inputNo')">
+            <div id="field-inputNo" class="relative px-3 h-12 border border-[#c0c0c0] bg-[#1c1c1e] rounded-[10px] flex items-center mb-3 transition-all ring-2 ring-inset ring-orange-500 z-10" onclick="setActiveField('inputNo')">
                 <span class="text-[14px] font-bold text-[#c0c0c0] shrink-0 whitespace-nowrap mr-2">備考</span>
                 <input type="text" id="inputNo" class="flex-1 w-full h-full bg-transparent text-left text-[18px] text-white font-bold outline-none" placeholder="名前、場所、番号等">
             </div>
@@ -215,20 +219,25 @@ if ('serviceWorker' in navigator) {
                     </div>
                 </div>
 
-                <!-- 全幅 (W) -->
-                <div id="field-totalLength" class="relative px-3 h-[3.5rem] border-b border-[#545458] flex items-center transition-all ring-2 ring-inset ring-orange-500 z-10 bg-[#2c2c2e]" onclick="setActiveField('totalLength')">
-                    <span class="text-[14px] font-bold text-[#c0c0c0] uppercase shrink-0 whitespace-nowrap mr-2">全幅 (W)</span>
-                    <input type="text" id="totalLength" inputmode="none" class="flex-1 w-full h-full bg-transparent text-center text-[26px] text-white font-black outline-none font-mono" placeholder="張り面幅">
+                <!-- +加算 と C -->
+                <div class="flex border-b border-[#545458] items-center px-3 h-12 bg-[#1c1c1e]">
+                    <div id="field-addLength" class="relative flex-1 h-[2.5rem] flex items-center transition-all overflow-hidden rounded-md" onclick="setActiveField('addLength')">
+                        <span class="text-[14px] font-bold text-[#c0c0c0] shrink-0 whitespace-nowrap mr-6">+加算</span>
+                        <input type="text" id="addLength" inputmode="none" class="flex-1 w-full h-full bg-transparent text-left text-[19px] text-gray-400 font-bold outline-none font-mono" placeholder="数値入力">
+                    </div>
+                    <button onclick="handleKeypad('C')" class="w-[3.5rem] h-[2rem] rounded-lg bg-[#3a3a3c] text-white font-bold text-[14px] active:opacity-60 shadow-[0_1px_3px_rgba(0,0,0,0.5)] shrink-0 ml-2">
+                        C
+                    </button>
                 </div>
 
-                <!-- +加算 & エンター(⏎) 一体行 -->
-                <div class="flex border-b border-[#545458]">
-                    <div id="field-addLength" class="relative flex-1 px-3 h-[3.2rem] flex items-center transition-all overflow-hidden" onclick="setActiveField('addLength')">
-                        <span class="text-[14px] font-bold text-[#c0c0c0] uppercase shrink-0 whitespace-nowrap mr-2">+加算</span>
-                        <input type="text" id="addLength" inputmode="none" class="flex-1 w-full h-full bg-transparent text-center text-[22px] text-[#c0c0c0] font-bold outline-none font-mono" placeholder="全幅に加算">
+                <!-- 全幅 と AC -->
+                <div class="flex border-b border-[#545458] items-center px-3 h-12 bg-[#1c1c1e]">
+                    <div id="field-totalLength" class="relative flex-1 h-[2.5rem] flex items-center transition-all rounded-md px-2 -ml-2 bg-[#2c2c2e]" onclick="setActiveField('totalLength')">
+                        <span class="text-[14px] font-bold text-[#c0c0c0] shrink-0 whitespace-nowrap mr-6">全幅</span>
+                        <input type="text" id="totalLength" inputmode="none" class="flex-1 w-full h-full bg-transparent text-left text-[19px] text-white font-bold outline-none font-mono" placeholder="取り付け全長">
                     </div>
-                    <button id="keypad-enter" onclick="handleKeypad('⏎')" class="w-[25%] flex items-center justify-center text-[21px] font-bold border-l border-[#545458] btn-3d-silver-ios text-zinc-800 h-[3.2rem]">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 10l-5 5 5 5M4 15h11a5 5 0 0 0 5-5V7"></path></svg>
+                    <button onclick="handleKeypad('AC')" class="w-[3.5rem] h-[2rem] rounded-lg bg-[#3a3a3c] text-white font-bold text-[14px] active:opacity-60 shadow-[0_1px_3px_rgba(0,0,0,0.5)] shrink-0 ml-2">
+                        AC
                     </button>
                 </div>
 
@@ -237,24 +246,25 @@ if ('serviceWorker' in navigator) {
 
                 <!-- テンキーエリア -->
                 <div class="grid grid-cols-4 bg-[#2c2c2e]">
-                    <button onclick="handleKeypad('7')" class="flex items-center justify-center text-[21px] font-bold h-[3.2rem] border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">7</button>
-                    <button onclick="handleKeypad('8')" class="flex items-center justify-center text-[21px] font-bold h-[3.2rem] border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">8</button>
-                    <button onclick="handleKeypad('9')" class="flex items-center justify-center text-[21px] font-bold h-[3.2rem] border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">9</button>
-                    <button onclick="handleKeypad('C')" class="flex items-center justify-center text-[21px] font-bold border-b border-[#3a3a3c] active:opacity-60 bg-[#3a3a3c] text-white">C</button>
+                    <button onclick="handleKeypad('7')" class="flex items-center justify-center text-[22px] font-bold h-12 border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">7</button>
+                    <button onclick="handleKeypad('8')" class="flex items-center justify-center text-[22px] font-bold h-12 border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">8</button>
+                    <button onclick="handleKeypad('9')" class="flex items-center justify-center text-[22px] font-bold h-12 border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">9</button>
+                    <button id="keypad-enter" onclick="handleKeypad('⏎')" class="flex items-center justify-center text-[18px] font-bold border-b border-[#3a3a3c] btn-3d-silver-ios text-zinc-800 row-span-2 h-auto">
+                        <span class="text-[18px] font-bold">加算</span>
+                    </button>
 
-                    <button onclick="handleKeypad('4')" class="flex items-center justify-center text-[21px] font-bold h-[3.2rem] border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">4</button>
-                    <button onclick="handleKeypad('5')" class="flex items-center justify-center text-[21px] font-bold h-[3.2rem] border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">5</button>
-                    <button onclick="handleKeypad('6')" class="flex items-center justify-center text-[21px] font-bold h-[3.2rem] border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">6</button>
-                    <button onclick="handleKeypad('AC')" class="flex items-center justify-center text-[21px] font-bold border-b border-[#3a3a3c] active:opacity-60 bg-[#3a3a3c] text-white">AC</button>
+                    <button onclick="handleKeypad('4')" class="flex items-center justify-center text-[22px] font-bold h-12 border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">4</button>
+                    <button onclick="handleKeypad('5')" class="flex items-center justify-center text-[22px] font-bold h-12 border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">5</button>
+                    <button onclick="handleKeypad('6')" class="flex items-center justify-center text-[22px] font-bold h-12 border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">6</button>
 
-                    <button onclick="handleKeypad('1')" class="flex items-center justify-center text-[21px] font-bold h-[3.2rem] border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">1</button>
-                    <button onclick="handleKeypad('2')" class="flex items-center justify-center text-[21px] font-bold h-[3.2rem] border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">2</button>
-                    <button onclick="handleKeypad('3')" class="flex items-center justify-center text-[21px] font-bold h-[3.2rem] border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">3</button>
-                    <button id="keypad-save" onclick="handleKeypad('保存')" class="flex items-center justify-center text-[16px] font-bold border-b border-[#3a3a3c] btn-3d-orange-ios text-white row-span-2 h-auto">保存</button>
+                    <button onclick="handleKeypad('1')" class="flex items-center justify-center text-[22px] font-bold h-12 border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">1</button>
+                    <button onclick="handleKeypad('2')" class="flex items-center justify-center text-[22px] font-bold h-12 border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">2</button>
+                    <button onclick="handleKeypad('3')" class="flex items-center justify-center text-[22px] font-bold h-12 border-r border-b border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">3</button>
+                    <button id="keypad-save" onclick="handleKeypad('保存')" class="flex items-center justify-center text-[18px] font-bold btn-3d-orange-ios text-white row-span-2 h-auto">保存</button>
 
-                    <button onclick="handleKeypad('0')" class="flex items-center justify-center text-[21px] font-bold h-[3.2rem] border-r border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">0</button>
-                    <button onclick="handleKeypad('00')" class="flex items-center justify-center text-[21px] font-bold h-[3.2rem] border-r border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">00</button>
-                    <button onclick="handleKeypad('+/-')" class="flex items-center justify-center text-[21px] font-bold h-[3.2rem] border-r border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">+/-</button>
+                    <button onclick="handleKeypad('0')" class="flex items-center justify-center text-[22px] font-bold h-12 border-r border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">0</button>
+                    <button onclick="handleKeypad('00')" class="flex items-center justify-center text-[22px] font-bold h-12 border-r border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">00</button>
+                    <button onclick="handleKeypad('+/-')" class="flex items-center justify-center text-[22px] font-bold h-12 border-r border-[#3a3a3c] active:opacity-60 bg-[#1c1c1e] text-white">+/-</button>
                 </div>
             </div>
 
@@ -412,7 +422,7 @@ if ('serviceWorker' in navigator) {
         let historyData = [];
         let currentTab = 'calc';
         let touchStartX = 0, touchStartY = 0;
-        let activeField = 'totalLength';
+        let activeField = 'inputNo';
         let isNewEntry = true;
         let inputSource = null;
 
@@ -546,7 +556,7 @@ if ('serviceWorker' in navigator) {
             if(shouldSave) localStorage.setItem('waritsuke_history_v14', JSON.stringify(historyData));
         }
 
-        function setActiveField(fieldName) {
+        function setActiveField(fieldName, skipFocus = false) {
             if (activeField && activeField !== fieldName && activeField !== 'inputNo') formatInputDisplay(document.getElementById(activeField));
             document.querySelectorAll('[id^="field-"]').forEach(el => el.classList.remove('ring-2', 'ring-inset', 'ring-orange-500', 'z-10', 'bg-[#2c2c2e]'));
             const el = document.getElementById('field-' + fieldName);
@@ -555,10 +565,12 @@ if ('serviceWorker' in navigator) {
             const current = document.getElementById(activeField);
             if (current) {
                 current.value = current.value.replace(/,/g, '');
-                setTimeout(() => current.select(), 10);
+                if (!skipFocus) {
+                    setTimeout(() => current.select(), 10);
+                }
             }
             if (keypadEnter) {
-                if (fieldName === 'addLength') keypadEnter.innerHTML = '<span class="text-[18px]">加算</span>';
+                if (fieldName === 'addLength') keypadEnter.innerHTML = '<span class="text-[18px] font-bold">加算</span>';
                 else keypadEnter.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 10l-5 5 5 5M4 15h11a5 5 0 0 0 5-5V7"></path></svg>';
             }
         }
@@ -567,7 +579,7 @@ if ('serviceWorker' in navigator) {
             const input = document.getElementById(activeField);
             if (key === 'AC') {
                 [totalLengthInput, addLengthInput, memoDimInput, pitchInput, countInput, inputNo].forEach(i => i.value = ''); 
-                inputSource = null; calculate(); setActiveField('totalLength'); return; 
+                inputSource = null; calculate(); setActiveField('inputNo', true); return; 
             }
             if (key === 'C') { if (input) input.value = ''; calculate(); return; }
             if (key === '+/-') {
@@ -621,7 +633,7 @@ if ('serviceWorker' in navigator) {
                 if (activeField === 'addLength') { executeAddition(); } 
                 else {
                     const fields = ['inputNo', 'memoDim', 'pitch', 'count', 'totalLength', 'addLength'];
-                    setActiveField(fields[(fields.indexOf(activeField) + 1) % fields.length]);
+                    setActiveField(fields[(fields.indexOf(activeField) + 1) % fields.length], true);
                 }
                 return;
             }
@@ -647,7 +659,7 @@ if ('serviceWorker' in navigator) {
                 formatInputDisplay(totalLengthInput);
                 calculate(); 
             }
-            setActiveField('addLength');
+            setActiveField('addLength', true);
         }
 
         function switchTab(tabName) {
@@ -684,10 +696,10 @@ if ('serviceWorker' in navigator) {
         window.onload = function() {
             const h = localStorage.getItem('waritsuke_history_v14'); if (h) historyData = JSON.parse(h);
             updateHistoryTable(false);
-            setActiveField('totalLength');
+            setActiveField('inputNo', true);
             updateRemarkTotals();
             [totalLengthInput, addLengthInput, memoDimInput, pitchInput, countInput, inputNo].forEach(el => {
-                el.onfocus = (e) => setActiveField(e.target.id);
+                el.onfocus = (e) => setActiveField(e.target.id, false);
             });
             document.body.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; touchStartY = e.changedTouches[0].screenY; }, { passive: true });
             document.body.addEventListener('touchend', e => {
