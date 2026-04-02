@@ -26,5 +26,8 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "id": "./index.html",
+  "lang": "ja",
+  "description": "材料取り割付のPWA"
 }

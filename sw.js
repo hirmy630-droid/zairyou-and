@@ -1,7 +1,7 @@
-const CACHE_NAME = 'zairyo-v20260403-01';
-const CORE_ASSETS = [
-  './',
-  './index.html',
+const STATIC_CACHE = 'zairyo-static-v20260403-1';
+const DYNAMIC_CACHE = 'zairyo-dynamic-v20260403-1';
+
+const APP_SHELL = [
   './manifest.json',
   './icon-180.png',
   './icon-192.png',
@@ -10,8 +10,8 @@ const CORE_ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(CORE_ASSETS))
+    caches.open(STATIC_CACHE)
+      .then((cache) => cache.addAll(APP_SHELL))
       .then(() => self.skipWaiting())
   );
 });
@@ -20,7 +20,12 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
-        keys.map((key) => (key !== CACHE_NAME ? caches.delete(key) : Promise.resolve()))
+        keys.map((key) => {
+          if (key !== STATIC_CACHE && key !== DYNAMIC_CACHE) {
+            return caches.delete(key);
+          }
+          return Promise.resolve();
+        })
       )
     ).then(() => self.clients.claim())
   );
@@ -29,36 +34,42 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
-  const url = new URL(event.request.url);
+  const request = event.request;
+  const url = new URL(request.url);
   const isSameOrigin = url.origin === self.location.origin;
-  const isDocumentRequest = event.request.mode === 'navigate' ||
-    url.pathname.endsWith('/') ||
-    url.pathname.endsWith('/index.html') ||
-    url.pathname.endsWith('/manifest.json');
+  const isDocument = request.mode === 'navigate' || request.destination === 'document';
 
-  if (!isSameOrigin) {
-    return;
-  }
-
-  if (isDocumentRequest) {
+  if (isDocument) {
     event.respondWith(
-      fetch(event.request)
+      fetch(request)
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          caches.open(DYNAMIC_CACHE).then((cache) => {
+            cache.put(request, copy.clone());
+            cache.put('./index.html', copy);
+          });
           return response;
         })
-        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./index.html')))
+        .catch(async () => {
+          const cached = await caches.match(request);
+          return cached || caches.match('./index.html');
+        })
     );
     return;
   }
 
+  if (!isSameOrigin) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then((cached) => {
+    caches.match(request).then((cached) => {
       if (cached) return cached;
-      return fetch(event.request).then((response) => {
+
+      return fetch(request).then((response) => {
         const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, copy));
         return response;
       });
     })
